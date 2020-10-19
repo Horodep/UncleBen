@@ -1,0 +1,22 @@
+{
+  "name": "uncleben",
+  "version": "1.1.0",
+  "description": "discord bot logging voice presence",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Horodep/UncleBen.git"
+  },
+  "author": "Horodep",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Horodep/UncleBen/issues"
+  },
+  "homepage": "https://github.com/Horodep/UncleBen#readme",
+  "dependencies": {
+    "discord.js": "^12.3.1"
+  }
+}
