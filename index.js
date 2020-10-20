@@ -91,3 +91,24 @@ client.on('raw', async event => {
 		channel_sandbox.send('Ошибка ' + e.name + ":" + e.message + "\n<@" + config.users.developer + "> \n" + e.stack);
 	}
 });
+
+client.on('message', (message) => {
+	try {
+		if (!message.author.bot){
+			if (message.content.substring(0, 1) == '!') {
+				var args = message.content.substring(1).split(' ');
+				var date = new Date();
+
+				switch(args[0]) {
+					case "uncle":
+						channel_sandbox.send("Here!");
+						break;
+					default:
+						break;
+				}
+			}
+		}
+	} catch(e) {
+		channel_sandbox.send('Ошибка ' + e.name + ":" + e.message + "\n<@" + config.users.developer + "> \n" + e.stack);
+	}
+});
