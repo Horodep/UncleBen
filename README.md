@@ -31,3 +31,36 @@ discord bot logging voice presence
 	}
 }
 ```
+
+## Database
+```sql
+CREATE TABLE members (
+    id VARCHAR(255) NOT NULL, /*I had some troubles with requesting bigint so it is string*/
+    name BINARY(50) NOT NULL,
+    inVoice BINARY NOT NULL,
+    membershipId VARCHAR(255) DEFAULT NULL,
+    membershipType INT UNSIGNED DEFAULT NULL,
+    PRIMARY KEY (id)
+)
+
+CREATE TABLE log (
+    id INT NOT NULL AUTO_INCREMENT,
+    member_id BIGINT NOT NULL,
+    datetime DATETIME NOT NULL,
+    state BINARY NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE INDEX id_UNIQUE(id)
+)
+
+CREATE 
+	DEFINER = 'root'@'localhost'
+TRIGGER onInVoiceUpdate
+	AFTER UPDATE
+	ON members
+	FOR EACH ROW
+BEGIN
+    IF NEW.inVoice <> OLD.inVoice THEN
+        INSERT INTO auroras.log (member_id, datetime, state) VALUES (NEW.id, NOW(), NEW.inVoice);
+    END IF;
+END
+```
