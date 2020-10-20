@@ -19,13 +19,14 @@ var channel_sandbox;
 
 client.on('ready', () => {
 	console.log('Hello from London!');
-		
 	channel_sandbox = client.channels.cache.get(config.channels.sandbox);
+	require('./startup').start(pool, client);
 });
 
 client.on('guildMemberAdd', member => {
 	console.log('NEW MEMBER ' + member.displayName); 
-	pool.getConnection(function(err, connection) {
+	try{
+		pool.getConnection(function(err, connection) {
 			if (err) throw err; // not connected!
 			
 			connection.query('SELECT * FROM members WHERE id = ?', member.id, function (err, results, fields) {
@@ -42,6 +43,9 @@ client.on('guildMemberAdd', member => {
 				}
 			});
 		});
+	} catch(e) {
+		channel_sandbox.send('Ошибка ' + e.name + ":" + e.message + "\n<@" + config.users.developer + "> \n" + e.stack);
+	}
 });
 
 client.on('raw', async event => {
@@ -84,6 +88,6 @@ client.on('raw', async event => {
 			});
 		}
 	} catch(e) {
-		channel_sandbox.send('Ошибка ' + e.name + ":" + e.message + "\n<@149245139389251584> \n" + e.stack);
+		channel_sandbox.send('Ошибка ' + e.name + ":" + e.message + "\n<@" + config.users.developer + "> \n" + e.stack);
 	}
 });
