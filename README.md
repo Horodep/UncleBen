@@ -18,7 +18,7 @@ discord bot logging voice presence
 		"afk"         : "000000000000000000"
 	},
         "users":{
-            "developer"     : "149245139389251584"
+                "developer"   : "000000000000000000"
         },
     
 	
