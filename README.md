@@ -17,6 +17,10 @@ discord bot logging voice presence
 		"sandbox"     : "000000000000000000",
 		"afk"         : "000000000000000000"
 	},
+        "users":{
+            "developer"     : "149245139389251584"
+        },
+    
 	
 	"mysql"      :{
 		"host"          : "localhost",
