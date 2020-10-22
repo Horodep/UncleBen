@@ -31,16 +31,13 @@ client.on('guildMemberAdd', member => {
 			
 			connection.query('SELECT * FROM members WHERE id = ?', member.id, function (err, results, fields) {
 				if (err) throw err;
-				else{
-					console.log("Free pool: "+ pool._freeConnections.length + " ;    " + "gained answer: " + member.displayName);
-					if(results.length == 0){
-						connection.query('INSERT INTO members (id, name, inVoice) VALUES (?, ?, 0)', [member.id, ''] , function(err, result) {
-							console.log("Free pool: "+ pool._freeConnections.length + " ;    " + member.id + " " + member.displayName);	
-							if (err) throw err;
-							else connection.release();
-						});
-					}else connection.release();
-				}
+				
+				if(results.length == 0){
+					connection.query('INSERT INTO members (id, name, inVoice) VALUES (?, ?, 0)', [member.id, ''] , function(err, result) {
+						if (err) throw err;
+						connection.release();
+					});
+				}else connection.release();
 			});
 		});
 	} catch(e) {
@@ -52,38 +49,24 @@ client.on('raw', async event => {
 	try{
 		if (event.t == 'VOICE_STATE_UPDATE') {
 			pool.getConnection(function(err, connection) {
-				if (err) console.log(err); // not connected!
+				if (err) throw err; // not connected!
 				
-				if(event.d.channel_id == null || event.d.channel_id == config.channels.afk){
-					var query = connection.query('UPDATE members SET inVoice=0 WHERE id = ?', event.d.user_id, function(err, result) {
+				var inVoiceChannel = 
+					event.d.channel_id != null && 
+					event.d.channel_id != config.channels.afk;
+
+				logVoiceEvent(inVoiceChannel, event);
+
+				if(!inVoiceChannel || event.d.self_mute == true || event.d.self_deaf == true){
+					connection.query('UPDATE members SET inVoice=0 WHERE id = ?', event.d.user_id, function(err, result) {
 						if (err) throw err;
-						else {
-							console.log(new Date() + " Free: "+pool._freeConnections.length + "; " + event.d.user_id + " out of voice");
-							connection.release();
-						}
+						connection.release();
 					});
 				}else{
-					if(event.d.self_mute == true || event.d.self_deaf == true){
-						var query = connection.query('UPDATE members SET inVoice=0 WHERE id = ?', event.d.user_id, function(err, result) {
-							if (err) throw err;
-							else {
-								console.log(new Date() + " Free: "+pool._freeConnections.length + "; " + event.d.user_id + " in "+
-											"; mic: "+ (event.d.self_mute ? "off" : "on ")+
-											"; speaker: "+ (event.d.self_deaf ? "off" : "on "));
-								connection.release();
-							}
-						});
-					}else{
-						var query = connection.query('UPDATE members SET inVoice=1 WHERE id = ?', event.d.user_id, function(err, result) {
-							if (err) throw err;
-							else {
-							console.log(new Date() + " Free: "+pool._freeConnections.length + "; " + event.d.user_id + " in "+
-										"; mic: "+ (event.d.self_mute ? "off" : "on ")+
-										"; speaker: "+ (event.d.self_deaf ? "off" : "on "));
-								connection.release();
-							}
-						});
-					}
+					connection.query('UPDATE members SET inVoice=1 WHERE id = ?', event.d.user_id, function(err, result) {
+						if (err) throw err;
+						connection.release();
+					});
 				}
 			});
 		}
@@ -94,21 +77,27 @@ client.on('raw', async event => {
 
 client.on('message', (message) => {
 	try {
-		if (!message.author.bot){
-			if (message.content.substring(0, 1) == '!') {
-				var args = message.content.substring(1).split(' ');
-				var date = new Date();
+		if (!message.author.bot && message.content.startsWith("!")){
+			var args = message.content.substring(1).split(' ');
 
-				switch(args[0]) {
-					case "uncle":
-						channel_sandbox.send("Here!");
-						break;
-					default:
-						break;
-				}
+			switch(args[0]) {
+				case "uncle":
+					channel_sandbox.send("Here!");
+					break;
+				default:
+					break;
 			}
 		}
 	} catch(e) {
 		channel_sandbox.send('Ошибка ' + e.name + ":" + e.message + "\n<@" + config.users.developer + "> \n" + e.stack);
 	}
 });
+
+function logVoiceEvent(inVoiceChannel, event){
+	var inVoiceChannelLine = 
+		" ; mic: "+ (event.d.self_mute ? "off" : "on") +
+		" ; speaker: "+ (event.d.self_deaf ? "off" : "on");
+	
+	console.log(new Date() + " Free: "+pool._freeConnections.length + "; " + event.d.user_id + 
+				(inVoiceChannel ? " in" + inVoiceChannelLine : " out of voice"));
+}
