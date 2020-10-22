@@ -18,5 +18,5 @@ var pool = mysql.createPool({
 
 client.on('ready', () => {
 	console.log(new Date() + " init");
-	require('./startup').start(pool, client, true);
+	require('./recheckUsers').start(pool, client, true);
 })

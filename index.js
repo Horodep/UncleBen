@@ -20,7 +20,7 @@ var channel_sandbox;
 client.on('ready', () => {
 	console.log('Hello from London!');
 	channel_sandbox = client.channels.cache.get(config.channels.sandbox);
-	require('./startup').start(pool, client);
+	require('./recheckUsers').start(pool, client);
 });
 
 client.on('guildMemberAdd', member => {
