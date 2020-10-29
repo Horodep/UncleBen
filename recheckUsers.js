@@ -6,39 +6,35 @@ exports.start = function (pool, client, killAsExecuted) {
 	
 	try{
 		var counter = 0;
+		console.log(guild.members.cache.size);
 		guild.members.cache.each(function(member){
-			pool.getConnection(function(err, connection) {
-				if (err) throw err; // not connected!
-				
-				connection.query('SELECT * FROM members WHERE id = ?', member.id, function (err, results, fields) {
-					if (err) throw err;
-					if(results.length == 0){
-						connection.query('INSERT INTO members (id, name, inVoice) VALUES (?, ?, 0)', [member.id, ''] , function(err, result) {
-							if (err) throw err;
-							console.log("Free pool: "+ pool._freeConnections.length + " ;  insert member " + member.displayName);	
-						});
-					}
-					
-					var inVoice = !(
-						member.voice.channelID == null || 
-						member.voice.channelID == config.channels.afk || 
-						member.voice.selfMute == true || 
-						member.voice.selfDeaf == true);
-					
-					connection.query('UPDATE members SET inVoice= ? WHERE id = ?', [(inVoice ? 1 : 0), member.id] , function(err, result) {
+			pool.query('SELECT * FROM public.members WHERE id = $1',[member.id], (err, results) => {
+				if (err) throw err;
+				if(results.length == 0){
+					pool.connect().query('INSERT INTO public.members (id, name, inVoice) VALUES ($1, $2, false)', [member.id, ''] , (err) => {
 						if (err) throw err;
-						console.log("Free pool: "+ pool._freeConnections.length + " ;  update member " + member.displayName);
-						connection.release();
+						console.log("WaitingQuery: "+pool.waitingCount + "; insert member " + member.displayName);	
 					});
-				});
-				counter++;
-				if(killAsExecuted == true && counter == guild.members.cache.size) {
-					setTimeout(function(){
-						client.destroy();
-						process.exit();
-					}, 150);
 				}
+				
+				var inVoice = !(
+					member.voice.channelID == null || 
+					member.voice.channelID == config.channels.afk || 
+					member.voice.selfMute == true || 
+					member.voice.selfDeaf == true);
+				
+				pool.query('UPDATE public.members SET inVoice=$1 WHERE id = $2', [inVoice, member.id] , (err) => {
+					if (err) throw err;
+					console.log("WaitingQuery: "+pool.waitingCount + "; update member " + member.displayName);	
+				});
 			});
+			counter++;
+			if(killAsExecuted == true && counter == guild.members.cache.size) {
+				setTimeout(function(){
+					client.destroy();
+					process.exit();
+				}, 150);
+			}
 		});
 	} catch(e) {
 		channel_sandbox.send('Ошибка ' + e.name + ":" + e.message + "\n<@" + config.users.developer + "> \n" + e.stack);

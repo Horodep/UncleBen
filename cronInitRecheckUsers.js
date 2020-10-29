@@ -1,18 +1,18 @@
 const Discord = require("discord.js");
-const mysql = require('mysql'); 
+const { Pool } = require('pg');
 
 const config = require("./config.json");
 	
 const client = new Discord.Client();
 client.login(config.discordApiKey);
 
-var pool = mysql.createPool({
-	connectionLimit : 10,
-	host     : config.mysql.host,
-	user     : config.mysql.username,
-	password : config.mysql.password,
-	database : config.mysql.database,
-	charset  : config.mysql.charset
+const pool = new Pool({
+	host: config.sql.host,
+	database: config.sql.database,
+	user: config.sql.username,
+	password: config.sql.password,
+	port: 5432,
+	max: 10
 });
 
 

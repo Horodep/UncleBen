@@ -19,29 +19,27 @@ const pool = new Pool({
 
 var channel_sandbox;
 
+pool.connect((err, client, done) => {
+	console.log("connected");
+})
+
 client.on('ready', () => {
 	console.log('Hello from London!');
 	channel_sandbox = client.channels.cache.get(config.channels.sandbox);
-	//require('./recheckUsers').start(pool, client);
+	require('./recheckUsers').start(pool, client);
 });
 
 client.on('guildMemberAdd', member => {
 	console.log('NEW MEMBER ' + member.displayName); 
 	try{
-		/*pool.getConnection(function(err, connection) {
-			if (err) throw err; // not connected!
-			
-			connection.query('SELECT * FROM members WHERE id = ?', member.id, function (err, results, fields) {
+		pool.query('SELECT * FROM public.members WHERE id = $1', [member.id], (err, results) => {
+			if (err) throw err;			
+			if(results.length != 0) return;
+
+			pool.query('INSERT INTO members (id, name, inVoice) VALUES ($1, $2, 0)', [member.id, ''] , (err) => {
 				if (err) throw err;
-				
-				if(results.length == 0){
-					connection.query('INSERT INTO members (id, name, inVoice) VALUES (?, ?, 0)', [member.id, ''] , function(err, result) {
-						if (err) throw err;
-						connection.release();
-					});
-				}else connection.release();
 			});
-		});*/
+		});
 	} catch(e) {
 		channel_sandbox.send('Ошибка ' + e.name + ":" + e.message + "\n<@" + config.users.developer + "> \n" + e.stack);
 	}
@@ -50,38 +48,24 @@ client.on('guildMemberAdd', member => {
 client.on('raw', async event => {
 	try{
 		if (event.t == 'VOICE_STATE_UPDATE') {
-			pool.query('SELECT * FROM users WHERE id = $1', [1], (err, res) => {
-				if (err) {
-				  throw err
-				}
-				console.log('user:', res.rows[0])
-			  })
-			  
+			var inVoiceChannel = 
+				event.d.channel_id != null && 
+				event.d.channel_id != config.channels.afk;
 
-			pool.getConnection(function(err, connection) {
-				if (err) throw err; // not connected!
-				
-				var inVoiceChannel = 
-					event.d.channel_id != null && 
-					event.d.channel_id != config.channels.afk;
+			logVoiceEvent(inVoiceChannel, event);
 
-				logVoiceEvent(inVoiceChannel, event);
-
-				if(!inVoiceChannel || event.d.self_mute == true || event.d.self_deaf == true){
-					connection.query('UPDATE members SET inVoice=0 WHERE id = ?', event.d.user_id, function(err, result) {
-						if (err) throw err;
-						connection.release();
-					});
-				}else{
-					connection.query('UPDATE members SET inVoice=1 WHERE id = ?', event.d.user_id, function(err, result) {
-						if (err) throw err;
-						connection.release();
-					});
-				}
-			});
+			if(!inVoiceChannel || event.d.self_mute == true || event.d.self_deaf == true){
+				pool.query('UPDATE public.members SET inVoice=false WHERE id = $1', [event.d.user_id], (err) => {
+					if (err) throw err;
+				});
+			}else{
+				pool.query('UPDATE public.members SET inVoice=true WHERE id = $1', [event.d.user_id], (err) => {
+					if (err) throw err;
+				});
+			}	
 		}
 	} catch(e) {
-		channel_sandbox.send('Ошибка ' + e.name + ":" + e.message + "\n<@" + config.users.developer + "> \n" + e.stack);
+		console.log('Ошибка ' + e.name + ":" + e.message + "\n<@" + config.users.developer + "> \n" + e.stack);
 	}
 });
 
@@ -105,9 +89,9 @@ client.on('message', (message) => {
 
 function logVoiceEvent(inVoiceChannel, event){
 	var inVoiceChannelLine = 
-		" ; mic: "+ (event.d.self_mute ? "off" : "on") +
-		" ; speaker: "+ (event.d.self_deaf ? "off" : "on");
+		" ; mic: "+ (event.d.self_mute ? "off" : "on ") +
+		" ; speaker: "+ (event.d.self_deaf ? "off" : "on ");
 	
-	console.log(new Date() + " Free: "+pool._freeConnections.length + "; " + event.d.user_id + 
+	console.log(new Date() + " WaitingQuery: "+pool.waitingCount + "; " + event.d.user_id + 
 				(inVoiceChannel ? " in" + inVoiceChannelLine : " out of voice"));
 }
