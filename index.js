@@ -19,53 +19,48 @@ const pool = new Pool({
 
 var channel_sandbox;
 
-pool.connect((err, client, done) => {
-	console.log("connected");
+pool.connect((err) => {
+	if (err) handleError(err);
+	else console.log("connected");
 })
 
 client.on('ready', () => {
 	console.log('Hello from London!');
 	channel_sandbox = client.channels.cache.get(config.channels.sandbox);
+	channel_sandbox.send('Hello from London!');
 	require('./recheckUsers').start(pool, client);
 });
 
 client.on('guildMemberAdd', member => {
 	console.log('NEW MEMBER ' + member.displayName); 
-	try{
-		pool.query('SELECT * FROM public.members WHERE id = $1', [member.id], (err, results) => {
-			if (err) throw err;			
-			if(results.length != 0) return;
 
-			pool.query('INSERT INTO members (id, name, inVoice) VALUES ($1, $2, 0)', [member.id, ''] , (err) => {
-				if (err) throw err;
-			});
+	pool.query('SELECT * FROM public.members WHERE id = $1', [member.id], (err, results) => {
+		if (err) handleError(err);			
+		if(results.length != 0) return;
+
+		pool.query('INSERT INTO members (id, name, inVoice) VALUES ($1, $2, 0)', [member.id, ''] , (err) => {
+			if (err) handleError(err);
 		});
-	} catch(e) {
-		channel_sandbox.send('Ошибка ' + e.name + ":" + e.message + "\n<@" + config.users.developer + "> \n" + e.stack);
-	}
+	});
 });
 
 client.on('raw', async event => {
-	try{
-		if (event.t == 'VOICE_STATE_UPDATE') {
-			var inVoiceChannel = 
-				event.d.channel_id != null && 
-				event.d.channel_id != config.channels.afk;
+	if (event.t == 'VOICE_STATE_UPDATE') {
+		var inVoiceChannel = 
+			event.d.channel_id != null && 
+			event.d.channel_id != config.channels.afk;
 
-			logVoiceEvent(inVoiceChannel, event);
+		logVoiceEvent(inVoiceChannel, event);
 
-			if(!inVoiceChannel || event.d.self_mute == true || event.d.self_deaf == true){
-				pool.query('UPDATE public.members SET inVoice=false WHERE id = $1', [event.d.user_id], (err) => {
-					if (err) throw err;
-				});
-			}else{
-				pool.query('UPDATE public.members SET inVoice=true WHERE id = $1', [event.d.user_id], (err) => {
-					if (err) throw err;
-				});
-			}	
-		}
-	} catch(e) {
-		console.log('Ошибка ' + e.name + ":" + e.message + "\n<@" + config.users.developer + "> \n" + e.stack);
+		if(!inVoiceChannel || event.d.self_mute == true || event.d.self_deaf == true){
+			pool.query('UPDATE public.members SET inVoice=false WHERE id = $1', [event.d.user_id], (err) => {
+				if (err) handleError(err);
+			});
+		}else{
+			pool.query('UPDATE public.members SET inVoice=true WHERE id = $1', [event.d.user_id], (err) => {
+				if (err) handleError(err);
+			});
+		}	
 	}
 });
 
@@ -83,7 +78,7 @@ client.on('message', (message) => {
 			}
 		}
 	} catch(e) {
-		channel_sandbox.send('Ошибка ' + e.name + ":" + e.message + "\n<@" + config.users.developer + "> \n" + e.stack);
+		handleError(err);
 	}
 });
 
@@ -94,4 +89,8 @@ function logVoiceEvent(inVoiceChannel, event){
 	
 	console.log(new Date() + " WaitingQuery: "+pool.waitingCount + "; " + event.d.user_id + 
 				(inVoiceChannel ? " in" + inVoiceChannelLine : " out of voice"));
+}
+
+function handleError(err){
+	console.log('Ошибка ' + err.name + ":" + err.message + "\n<@" + config.users.developer + "> \n" + err.stack);
 }
