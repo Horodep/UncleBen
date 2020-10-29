@@ -22,7 +22,7 @@ discord bot logging voice presence
         },
     
 	
-	"mysql"      :{
+	"sql"      :{
 		"host"          : "localhost",
 		"username"      : "username",
 		"password"      : "password",
@@ -32,35 +32,45 @@ discord bot logging voice presence
 }
 ```
 
-## Database
+## Database - PostgreSQL
 ```sql
-CREATE TABLE members (
-    id VARCHAR(255) NOT NULL, /*I had some troubles with requesting bigint so it is string*/
-    name BINARY(50) NOT NULL,
-    inVoice BINARY NOT NULL,
-    membershipId VARCHAR(255) DEFAULT NULL,
-    membershipType INT UNSIGNED DEFAULT NULL,
+CREATE TABLE members
+(
+    id decimal NOT NULL,
+    name VARCHAR NOT NULL,
+    invoice boolean NOT NULL,
+    membershipid decimal,
+    membershiptype decimal,
     PRIMARY KEY (id)
 )
 
-CREATE TABLE log (
-    id INT NOT NULL AUTO_INCREMENT,
-    member_id BIGINT NOT NULL,
-    datetime DATETIME NOT NULL,
-    state BINARY NOT NULL,
-    PRIMARY KEY (id),
-    UNIQUE INDEX id_UNIQUE(id)
+CREATE TABLE log
+(
+    id SERIAL NOT NULL,
+	member_id decimal NOT NULL,
+    datetime timestamp without time zone NOT NULL,
+    state boolean NOT NULL,
+    PRIMARY KEY (id)
 )
 
-CREATE 
-	DEFINER = 'root'@'localhost'
-TRIGGER onInVoiceUpdate
-	AFTER UPDATE
-	ON members
-	FOR EACH ROW
+CREATE FUNCTION public.on_invoice_update()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE NOT LEAKPROOF
+AS $BODY$
 BEGIN
-    IF NEW.inVoice <> OLD.inVoice THEN
-        INSERT INTO auroras.log (member_id, datetime, state) VALUES (NEW.id, NOW(), NEW.inVoice);
-    END IF;
-END
+	IF NEW.inVoice <> OLD.inVoice THEN
+		 INSERT INTO log (member_id, datetime, state) VALUES (NEW.id, NOW(), NEW.inVoice);
+	END IF;
+
+	RETURN NEW;
+END;
+$BODY$;
+
+CREATE TRIGGER trigger_on_invoice_update
+    AFTER UPDATE 
+    ON public.members
+    FOR EACH ROW
+    EXECUTE PROCEDURE public.on_invoice_update();
 ```
