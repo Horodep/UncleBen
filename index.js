@@ -36,7 +36,7 @@ client.on('guildMemberAdd', member => {
 
 	pool.query('SELECT * FROM public.members WHERE id = $1', [member.id], (err, results) => {
 		if (err) handleError(err);			
-		if(results.length != 0) return;
+		if(results.rowCount != 0) return;
 
 		pool.query('INSERT INTO members (id, name, inVoice) VALUES ($1, $2, 0)', [member.id, ''] , (err) => {
 			if (err) handleError(err);
