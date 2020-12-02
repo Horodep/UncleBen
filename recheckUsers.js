@@ -10,8 +10,8 @@ exports.start = function (pool, client, killAsExecuted) {
 		guild.members.cache.each(function(member){
 			pool.query('SELECT * FROM public.members WHERE id = $1',[member.id], (err, results) => {
 				if (err) throw err;
-				if(results.length == 0){
-					pool.connect().query('INSERT INTO public.members (id, name, inVoice) VALUES ($1, $2, false)', [member.id, ''] , (err) => {
+				if(results.rowCount == 0){
+					pool.query('INSERT INTO public.members (id, name, inVoice) VALUES ($1, $2, false)', [member.id, ''] , (err) => {
 						if (err) throw err;
 						console.log("WaitingQuery: "+pool.waitingCount + "; insert member " + member.displayName);	
 					});
