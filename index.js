@@ -87,7 +87,7 @@ function logVoiceEvent(inVoiceChannel, event){
 		" ; mic: "+ (event.d.self_mute ? "off" : "on ") +
 		" ; speaker: "+ (event.d.self_deaf ? "off" : "on ");
 	
-	console.log(new Date() + " WaitingQuery: "+pool.waitingCount + "; " + event.d.user_id + 
+	console.log("WaitingQuery: "+pool.waitingCount + "; " + event.d.user_id + 
 				(inVoiceChannel ? " in" + inVoiceChannelLine : " out of voice"));
 }
 
