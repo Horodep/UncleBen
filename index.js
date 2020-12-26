@@ -38,7 +38,7 @@ client.on('guildMemberAdd', member => {
 		if (err) handleError(err);			
 		if(results.rowCount != 0) return;
 
-		pool.query('INSERT INTO members (id, name, inVoice) VALUES ($1, $2, 0)', [member.id, ''] , (err) => {
+		pool.query('INSERT INTO members (id, name, inVoice) VALUES ($1, $2, false)', [member.id, ''] , (err) => {
 			if (err) handleError(err);
 		});
 	});
