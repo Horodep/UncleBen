@@ -33,7 +33,7 @@ exports.start = function (pool, client, killAsExecuted) {
 				setTimeout(function(){
 					client.destroy();
 					process.exit();
-				}, 150);
+				}, 5000);
 			}
 		});
 	} catch(e) {
